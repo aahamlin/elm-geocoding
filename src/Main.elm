@@ -92,13 +92,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         FormStreetMsg str ->
-            ( { model | form = setStreet str model.form }, Cmd.none )
+            ( { model | form = formUpdate model.form (\f -> { f | street = str }) }, Cmd.none )
 
         FormCityMsg str ->
-            ( { model | form = setCity str model.form }, Cmd.none )
+            ( { model | form = formUpdate model.form (\f -> { f | city = str }) }, Cmd.none )
 
         FormStateMsg str ->
-            ( { model | form = setState str model.form }, Cmd.none )
+            ( { model | form = formUpdate model.form (\f -> { f | state = str }) }, Cmd.none )
 
         FormSubmitMsg ->
             -- send address to geocod.io
@@ -112,7 +112,6 @@ update msg model =
                         [ string "q" (String.join " " [ model.form.street, model.form.city, model.form.state ])
                         , string "api_key" model.apiKey
                         ]
-                        |> Debug.log "url"
             in
             ( { model | latLng = Nothing, pageState = Loading }
             , Http.get
@@ -152,6 +151,11 @@ update msg model =
             ( { model | latLng = Nothing, pageState = errorCodeDesc code }, Cmd.none )
 
 
+formUpdate : Form -> (Form -> Form) -> Form
+formUpdate form fn =
+    fn form
+
+
 geocodioDecoder : Decoder (List LatLng)
 geocodioDecoder =
     Decode.field "results" (Decode.list resultDecoder)
@@ -183,21 +187,6 @@ errorCodeDesc e =
 
         _ ->
             Error "UNKNOWN"
-
-
-setStreet : String -> Form -> Form
-setStreet val form =
-    { form | street = val }
-
-
-setState : String -> Form -> Form
-setState val form =
-    { form | state = val }
-
-
-setCity : String -> Form -> Form
-setCity val form =
-    { form | city = val }
 
 
 view : Model -> Browser.Document Msg
