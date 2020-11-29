@@ -252,9 +252,15 @@ cardOptions =
     [ Card.light, Card.outlineDark ]
 
 
+blockOptions : List (Block.Option msg)
+blockOptions =
+    []
+
+
 buildFormCard : Model -> Card.Config Msg -> Card.Config Msg
 buildFormCard model =
-    Card.block []
+    Card.block
+        blockOptions
         [ Block.titleH5 [] [ text "Enter your address" ]
         , Form.form
             []
@@ -303,7 +309,8 @@ buildFormCard model =
 
 buildFetchCard : Model -> Card.Config Msg -> Card.Config Msg
 buildFetchCard model =
-    Card.block []
+    Card.block
+        blockOptions
         [ Block.titleH5 [] [ text "Fetch your address" ]
         , Block.text [] [ text "We will query the location from your browser." ]
         , Button.button
@@ -338,6 +345,7 @@ buildResultsView model =
     ]
 
 
+isFormIncomplete : Model -> Bool
 isFormIncomplete m =
     if m.form.street == "" || m.form.city == "" || m.form.state == "" then
         True
@@ -346,6 +354,7 @@ isFormIncomplete m =
         False
 
 
+isModelLoading : Model -> Bool
 isModelLoading m =
     case m.pageState of
         Loading ->
