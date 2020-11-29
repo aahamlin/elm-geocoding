@@ -293,7 +293,7 @@ buildFormCard model =
                     [ Button.primary
                     , Button.onClick FormSubmitMsg
                     , isFormIncomplete model
-                        |> andThen (not (isModelLoading model))
+                        |> orThen (isModelLoading model)
                         |> Button.disabled
                     ]
                     [ text "Lookup" ]
@@ -316,7 +316,7 @@ buildFetchCard model =
                 [ Button.primary
                 , Button.onClick GeoFetchMsg
                 , isApiKeyUnavailable model
-                    |> andThen (isModelLoading model)
+                    |> orThen (isModelLoading model)
                     |> Button.disabled
                 ]
                 [ text "Fetch" ]
@@ -370,9 +370,9 @@ isApiKeyUnavailable model =
     model.apiKey == ""
 
 
-andThen : Bool -> Bool -> Bool
-andThen a b =
-    a && b
+orThen : Bool -> Bool -> Bool
+orThen a b =
+    a || b
 
 
 toText : LatLng -> String
