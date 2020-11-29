@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Bitwise exposing (complement)
 import Bootstrap.Button as Button
@@ -25,7 +25,7 @@ main =
         { init = init
         , update = update
         , view = view
-        , subscriptions = \m -> Sub.none
+        , subscriptions = subscriptions
         }
 
 
@@ -53,6 +53,19 @@ type alias Model =
     }
 
 
+
+-- trigger navigator.geolocation call
+
+
+port getLocation : () -> Cmd msg
+
+
+port setLocation : (Value -> msg) -> Sub msg
+
+
+port onError : (Int -> msg) -> Sub msg
+
+
 empty =
     { form = Form "" "" "", latLng = Nothing, pageState = Idle }
 
@@ -68,6 +81,8 @@ type Msg
     | FormStateMsg String
     | FormSubmitMsg
     | GeoFetchMsg
+    | LocationReceived (Result Decode.Error LatLng)
+    | LocationError Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -86,7 +101,34 @@ update msg model =
             ( model, Cmd.none )
 
         GeoFetchMsg ->
-            ( { model | latLng = Just (LatLng 33.0 -27.23) }, Cmd.none )
+            ( { model | latLng = Nothing, pageState = Loading }, getLocation () )
+
+        LocationReceived res ->
+            case res of
+                Ok val ->
+                    ( { model | latLng = Just val, pageState = Idle }, Cmd.none )
+
+                Err err ->
+                    ( { model | latLng = Nothing, pageState = Error (Decode.errorToString err) }, Cmd.none )
+
+        LocationError code ->
+            ( { model | latLng = Nothing, pageState = errorCodeDesc code }, Cmd.none )
+
+
+errorCodeDesc : Int -> PageState
+errorCodeDesc e =
+    case e of
+        1 ->
+            Error "PERMISSION_DENIED"
+
+        2 ->
+            Error "POSITION_UNAVAILABLE"
+
+        3 ->
+            Error "TIMEOUT"
+
+        _ ->
+            Error "UNKNOWN"
 
 
 setStreet : String -> Form -> Form
@@ -219,8 +261,8 @@ pageContent model =
                         Loading ->
                             p [] [ text "Retrieving results..." ]
 
-                        Error errStr ->
-                            p [] [ text "error text here" ]
+                        Error err ->
+                            p [] [ text err ]
 
                         Idle ->
                             case model.latLng of
@@ -238,3 +280,18 @@ pageContent model =
 toText : LatLng -> String
 toText (LatLng lat lng) =
     String.fromFloat lat ++ " / " ++ String.fromFloat lng
+
+
+locationDecoder : Decoder LatLng
+locationDecoder =
+    Decode.map2 LatLng
+        (Decode.field "latitude" Decode.float)
+        (Decode.field "longitude" Decode.float)
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.batch
+        [ setLocation (Decode.decodeValue locationDecoder >> LocationReceived)
+        , onError LocationError
+        ]

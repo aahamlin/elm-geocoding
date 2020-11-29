@@ -1,0 +1,40 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Main</title>
+        <script src="main.js"></script>
+    </head>
+    <body>
+        <script>
+         var app = Elm.Main.init();
+
+         app.ports.getLocation.subscribe(() => {
+             if (navigator.geolocation) {
+                 //console.info('Called requested current location');
+                 navigator.geolocation.getCurrentPosition(
+                     function(position) {
+                         var data = {
+                             latitude: position.coords.latitude,
+                             longitude: position.coords.longitude
+                         };
+                         // elm 0.19 needs this to be async
+                         setTimeout(function () {
+                             app.ports.setLocation.send(data);
+                         }, 0);
+                     },
+                     function(error) {
+                         //console.info(error.message, error.code);
+                         setTimeout(function () {
+                             app.ports.onError.send(error.code);
+                         }, 0);
+                 });
+             }
+             else {
+                 console.error('navigator.geolocation not available.');
+             }
+         });
+
+        </script>
+    </body>
+</html>
