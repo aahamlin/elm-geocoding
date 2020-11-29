@@ -15,6 +15,10 @@ Do not push git repo!
 
 ## Development steps
 
-Compile - `npm run-script build`
+Compile - `npm run build` or `npm run build:debug`
+  Recommend using `build:debug` for development as this will give you time traveling debugging in the browser.
+
+Watch - `npm run watch`
 
 Serve locally - `npm start`
+  Serves web page on localhost:8080. Required to setup the `ports` and Geocod.io API_KEY.

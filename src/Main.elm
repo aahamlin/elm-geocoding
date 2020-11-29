@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
-import Bitwise exposing (complement)
+--import Html.Attributes.Extra exposing (attributeIf)
+
 import Bootstrap.Button as Button
 import Bootstrap.CDN as CDN
 import Bootstrap.Card as Card
@@ -15,10 +16,9 @@ import Bootstrap.Utilities.Spacing as Spacing
 import Browser
 import Html exposing (Html, div, h4, p, text)
 import Html.Attributes as Attr
-import Html.Attributes.Extra exposing (attributeIf)
-import Html.Events as Evt
 import Http
 import Json.Decode as Decode exposing (Decoder, Error(..), Value, decodeValue)
+import Url.Builder exposing (crossOrigin, string)
 
 
 main =
@@ -104,9 +104,19 @@ update msg model =
             -- send address to geocod.io
             -- https://api.geocod.io/v1.6/geocode?q=1109+N+Highland+St%2c+Arlington+VA&api_key=YOUR_API_KEY
             -- result is res.results[0].location.{lat,lng}
+            let
+                url =
+                    crossOrigin
+                        "https://api.geocod.io"
+                        [ "v1.6", "geocode" ]
+                        [ string "q" (String.join " " [ model.form.street, model.form.city, model.form.state ])
+                        , string "api_key" model.apiKey
+                        ]
+                        |> Debug.log "url"
+            in
             ( { model | latLng = Nothing, pageState = Loading }
             , Http.get
-                { url = "https://api.geocod.io/v1.6/geocode?q=1109+N+Highland+St%2c+Arlington+VA&api_key=" ++ model.apiKey
+                { url = url
                 , expect = Http.expectJson FormSubmitResult geocodioDecoder
                 }
             )
@@ -121,8 +131,11 @@ update msg model =
                         Http.BadBody decodeErr ->
                             ( { model | latLng = Nothing, pageState = Error decodeErr }, Cmd.none )
 
+                        Http.BadStatus _ ->
+                            ( { model | latLng = Nothing, pageState = Error "No results. Check your input was a valid address." }, Cmd.none )
+
                         _ ->
-                            ( { model | latLng = Nothing, pageState = Error "Request error." }, Cmd.none )
+                            ( { model | latLng = Nothing, pageState = Error "Request not completed. Server or network error occurred." }, Cmd.none )
 
         GeoFetchMsg ->
             ( { model | latLng = Nothing, pageState = Loading }, getLocation () )
