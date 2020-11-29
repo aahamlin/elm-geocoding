@@ -13,7 +13,7 @@ import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
 import Bootstrap.Text as Text
 import Bootstrap.Utilities.Flex as Flex
-import Bootstrap.Utilities.Spacing as Spacing
+import Bootstrap.Utilities.Spacing as Spacing exposing (m0)
 import Browser
 import Html exposing (Html, div, h4, p, text)
 import Html.Attributes as Attr
@@ -230,7 +230,7 @@ pageContent model =
 
 gridRowOptions : List (Row.Option msg)
 gridRowOptions =
-    [ Row.middleMd, Row.centerMd, Row.attrs [ Spacing.py5 ] ]
+    [ Row.middleMd, Row.centerMd, Row.attrs [ Spacing.py2 ] ]
 
 
 gridColOptions : List (Col.Option msg)
@@ -326,7 +326,7 @@ buildFetchCard model =
     ]
 
 
-buildResultsView : Model -> List (Html msg)
+buildResultsView : Model -> List (Html Msg)
 buildResultsView model =
     [ h4 [] [ text "Your location info" ]
     , case model.pageState of
@@ -342,8 +342,47 @@ buildResultsView model =
                     p [] [ text "No results." ]
 
                 Just latLng ->
-                    p [] [ latLng |> toText |> text ]
+                    loadMap latLng
     ]
+
+
+loadMap : LatLng -> Html Msg
+loadMap latLng =
+    div []
+        [ p [] [ latLng |> toText |> text ]
+        , googleMap latLng
+        ]
+
+
+googleMap : LatLng -> Html Msg
+googleMap latLng =
+    Html.node "google-map"
+        [ Attr.attribute "api-key" "AIzaSyCNArtmybelM_OqNmncJd82TBAf0xoBH9g"
+        , Attr.attribute "latitude" <| String.fromFloat <| toLatitude latLng
+        , Attr.attribute "longitude" <| String.fromFloat <| toLongitude latLng
+        , Attr.style "height" "500px"
+        ]
+        [ googleMapMarker latLng
+        ]
+
+
+googleMapMarker : LatLng -> Html Msg
+googleMapMarker latLng =
+    Html.node "google-map-marker"
+        [ Attr.attribute "latitude" <| String.fromFloat <| toLatitude latLng
+        , Attr.attribute "longitude" <| String.fromFloat <| toLongitude latLng
+        ]
+        []
+
+
+toLatitude : LatLng -> Float
+toLatitude (LatLng lat lng) =
+    lat
+
+
+toLongitude : LatLng -> Float
+toLongitude (LatLng lat lng) =
+    lng
 
 
 isFormIncomplete : Model -> Bool
