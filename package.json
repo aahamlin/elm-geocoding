@@ -5,8 +5,12 @@
     "main": "index.js",
     "watch": {
         "build:debug": {
-            "patterns": ["src/*.elm"],
-            "extensions": ["elm"]
+            "patterns": [
+                "src/*.elm"
+            ],
+            "extensions": [
+                "elm"
+            ]
         }
     },
     "scripts": {
