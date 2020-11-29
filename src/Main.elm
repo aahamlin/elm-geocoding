@@ -48,6 +48,7 @@ type PageState
 
 type alias Model =
     { form : Form
+    , apiKey : String
     , latLng : Maybe LatLng
     , pageState : PageState
     }
@@ -67,12 +68,12 @@ port onError : (Int -> msg) -> Sub msg
 
 
 empty =
-    { form = Form "" "" "", latLng = Nothing, pageState = Idle }
+    { form = Form "" "" "", latLng = Nothing, pageState = Idle, apiKey = "" }
 
 
-init : () -> ( Model, Cmd Msg )
-init () =
-    ( empty, Cmd.none )
+init : String -> ( Model, Cmd Msg )
+init geocodioApiKey =
+    ( { empty | apiKey = geocodioApiKey }, Cmd.none )
 
 
 type Msg
@@ -87,7 +88,7 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case Debug.log "update" msg of
+    case msg of
         FormStreetMsg str ->
             ( { model | form = setStreet str model.form }, Cmd.none )
 
@@ -166,7 +167,7 @@ pageContent model =
                 True
 
             else
-                isModelLoading m
+                False
 
         isModelLoading m =
             case m.pageState of
@@ -221,6 +222,7 @@ pageContent model =
                                     [ Button.primary
                                     , Button.onClick FormSubmitMsg
                                     , isFormIncomplete model
+                                        |> andThen (not (isModelLoading model))
                                         |> Button.disabled
                                     ]
                                     [ text "Lookup" ]
@@ -243,6 +245,9 @@ pageContent model =
                             , Button.button
                                 [ Button.primary
                                 , Button.onClick GeoFetchMsg
+                                , isApiKeyUnavailable model
+                                    |> andThen (isModelLoading model)
+                                    |> Button.disabled
                                 ]
                                 [ text "Fetch" ]
                                 |> Block.custom
@@ -275,6 +280,16 @@ pageContent model =
                 ]
             ]
         ]
+
+
+isApiKeyUnavailable : Model -> Bool
+isApiKeyUnavailable model =
+    model.apiKey == ""
+
+
+andThen : Bool -> Bool -> Bool
+andThen a b =
+    a && b
 
 
 toText : LatLng -> String
