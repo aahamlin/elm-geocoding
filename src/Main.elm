@@ -214,125 +214,156 @@ view model =
 
 pageContent : Model -> Html Msg
 pageContent model =
-    let
-        isFormIncomplete m =
-            if m.form.street == "" || m.form.city == "" || m.form.state == "" then
-                True
-
-            else
-                False
-
-        isModelLoading m =
-            case m.pageState of
-                Loading ->
-                    True
-
-                _ ->
-                    False
-    in
     div []
         [ Grid.container [ Spacing.mt5 ]
             [ Grid.row
-                [ Row.middleMd, Row.centerMd, Row.attrs [ Spacing.py5 ] ]
+                gridRowOptions
                 [ Grid.col
-                    [ Col.lg4 ]
-                    [ Card.config [ Card.light, Card.outlineDark ]
-                        |> Card.block []
-                            [ Block.titleH5 [] [ text "Enter your address" ]
-                            , Form.form
-                                []
-                                [ Form.group []
-                                    [ Form.label [ Attr.for "street" ] [ text "Street Address" ]
-                                    , Input.text
-                                        [ Input.id "street"
-                                        , isModelLoading model
-                                            |> Input.disabled
-                                        , Input.onInput FormStreetMsg
-                                        , Input.placeholder "123 Sesame Street"
-                                        ]
-                                    ]
-                                , Form.group []
-                                    [ Form.label [ Attr.for "city" ] [ text "City" ]
-                                    , Input.text
-                                        [ Input.id "city"
-                                        , isModelLoading model
-                                            |> Input.disabled
-                                        , Input.onInput FormCityMsg
-                                        , Input.placeholder "Hartford"
-                                        ]
-                                    ]
-                                , Form.group []
-                                    [ Form.label [ Attr.for "state" ] [ text "State" ]
-                                    , Input.text
-                                        [ Input.id "state"
-                                        , isModelLoading model
-                                            |> Input.disabled
-                                        , Input.onInput FormStateMsg
-                                        , Input.placeholder "CT, MA, TX"
-                                        ]
-                                    ]
-                                , Button.submitButton
-                                    [ Button.primary
-                                    , Button.onClick FormSubmitMsg
-                                    , isFormIncomplete model
-                                        |> andThen (not (isModelLoading model))
-                                        |> Button.disabled
-                                    ]
-                                    [ text "Lookup" ]
-                                ]
-                                |> Block.custom
-                            ]
+                    gridColOptions
+                    [ Card.config
+                        cardOptions
+                        |> buildFormCard model
                         |> Card.view
                     ]
                 , Grid.col
-                    [ Col.lg2
-                    , Col.textAlign Text.alignMdCenter
-                    ]
+                    gridColOptions
                     [ text "- OR -" ]
                 , Grid.col
-                    [ Col.lg4 ]
-                    [ Card.config [ Card.light, Card.outlineDark ]
-                        |> Card.block []
-                            [ Block.titleH5 [] [ text "Fetch your address" ]
-                            , Block.text [] [ text "We will query the location from your browser." ]
-                            , Button.button
-                                [ Button.primary
-                                , Button.onClick GeoFetchMsg
-                                , isApiKeyUnavailable model
-                                    |> andThen (isModelLoading model)
-                                    |> Button.disabled
-                                ]
-                                [ text "Fetch" ]
-                                |> Block.custom
-                            ]
+                    gridColOptions
+                    [ Card.config
+                        cardOptions
+                        |> buildFetchCard model
                         |> Card.view
                     ]
                 ]
             , Grid.row
-                [ Row.middleMd, Row.centerMd, Row.attrs [ Spacing.py5 ] ]
+                gridRowOptions
                 [ Grid.col
-                    [ Col.lg
-                    , Col.textAlign Text.alignMdCenter
-                    ]
-                    [ h4 [] [ text "Your location info" ]
-                    , case model.pageState of
-                        Loading ->
-                            p [] [ text "Retrieving results..." ]
-
-                        Error err ->
-                            p [] [ text err ]
-
-                        Idle ->
-                            case model.latLng of
-                                Nothing ->
-                                    p [] [ text "No results." ]
-
-                                Just latLng ->
-                                    p [] [ latLng |> toText |> text ]
-                    ]
+                    gridColOptions
+                    (buildResultsView model)
                 ]
             ]
         ]
+
+
+gridRowOptions : List (Row.Option msg)
+gridRowOptions =
+    [ Row.middleMd, Row.centerMd, Row.attrs [ Spacing.py5 ] ]
+
+
+gridColOptions : List (Col.Option msg)
+gridColOptions =
+    [ Col.lg
+    , Col.textAlign Text.alignMdCenter
+    ]
+
+
+cardOptions : List (Card.Option msg)
+cardOptions =
+    [ Card.light, Card.outlineDark ]
+
+
+buildFormCard : Model -> Card.Config Msg -> Card.Config Msg
+buildFormCard model =
+    Card.block []
+        [ Block.titleH5 [] [ text "Enter your address" ]
+        , Form.form
+            []
+            [ Form.group []
+                [ Form.label [ Attr.for "street" ] [ text "Street Address" ]
+                , Input.text
+                    [ Input.id "street"
+                    , isModelLoading model
+                        |> Input.disabled
+                    , Input.onInput FormStreetMsg
+                    , Input.placeholder "123 Sesame Street"
+                    ]
+                ]
+            , Form.group []
+                [ Form.label [ Attr.for "city" ] [ text "City" ]
+                , Input.text
+                    [ Input.id "city"
+                    , isModelLoading model
+                        |> Input.disabled
+                    , Input.onInput FormCityMsg
+                    , Input.placeholder "Hartford"
+                    ]
+                ]
+            , Form.group []
+                [ Form.label [ Attr.for "state" ] [ text "State" ]
+                , Input.text
+                    [ Input.id "state"
+                    , isModelLoading model
+                        |> Input.disabled
+                    , Input.onInput FormStateMsg
+                    , Input.placeholder "CT, MA, TX"
+                    ]
+                ]
+            , Button.submitButton
+                [ Button.primary
+                , Button.onClick FormSubmitMsg
+                , isFormIncomplete model
+                    |> andThen (not (isModelLoading model))
+                    |> Button.disabled
+                ]
+                [ text "Lookup" ]
+            ]
+            |> Block.custom
+        ]
+
+
+buildFetchCard : Model -> Card.Config Msg -> Card.Config Msg
+buildFetchCard model =
+    Card.block []
+        [ Block.titleH5 [] [ text "Fetch your address" ]
+        , Block.text [] [ text "We will query the location from your browser." ]
+        , Button.button
+            [ Button.primary
+            , Button.onClick GeoFetchMsg
+            , isApiKeyUnavailable model
+                |> andThen (isModelLoading model)
+                |> Button.disabled
+            ]
+            [ text "Fetch" ]
+            |> Block.custom
+        ]
+
+
+buildResultsView : Model -> List (Html msg)
+buildResultsView model =
+    [ h4 [] [ text "Your location info" ]
+    , case model.pageState of
+        Loading ->
+            p [] [ text "Retrieving results..." ]
+
+        Error err ->
+            p [] [ text err ]
+
+        Idle ->
+            case model.latLng of
+                Nothing ->
+                    p [] [ text "No results." ]
+
+                Just latLng ->
+                    p [] [ latLng |> toText |> text ]
+    ]
+
+
+isFormIncomplete m =
+    if m.form.street == "" || m.form.city == "" || m.form.state == "" then
+        True
+
+    else
+        False
+
+
+isModelLoading m =
+    case m.pageState of
+        Loading ->
+            True
+
+        _ ->
+            False
 
 
 isApiKeyUnavailable : Model -> Bool

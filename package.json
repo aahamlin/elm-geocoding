@@ -4,7 +4,10 @@
     "description": "",
     "main": "index.js",
     "watch": {
-        "build": "src/*.elm"
+        "build": {
+            "patterns": ["src/*.elm"],
+            "extensions": ["elm"]
+        }
     },
     "scripts": {
         "start": "npx http-server ./",
