@@ -12,6 +12,7 @@ import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
 import Bootstrap.Text as Text
+import Bootstrap.Utilities.Flex as Flex
 import Bootstrap.Utilities.Spacing as Spacing
 import Browser
 import Html exposing (Html, div, h4, p, text)
@@ -209,21 +210,13 @@ pageContent model =
                 gridRowOptions
                 [ Grid.col
                     gridColOptions
-                    [ Card.config
-                        cardOptions
-                        |> buildFormCard model
-                        |> Card.view
-                    ]
+                    (buildFormCard model)
                 , Grid.col
                     gridColOptions
                     [ text "- OR -" ]
                 , Grid.col
                     gridColOptions
-                    [ Card.config
-                        cardOptions
-                        |> buildFetchCard model
-                        |> Card.view
-                    ]
+                    (buildFetchCard model)
                 ]
             , Grid.row
                 gridRowOptions
@@ -257,72 +250,80 @@ blockOptions =
     []
 
 
-buildFormCard : Model -> Card.Config Msg -> Card.Config Msg
+buildFormCard : Model -> List (Html Msg)
 buildFormCard model =
-    Card.block
-        blockOptions
-        [ Block.titleH5 [] [ text "Enter your address" ]
-        , Form.form
-            []
-            [ Form.group []
-                [ Form.label [ Attr.for "street" ] [ text "Street Address" ]
-                , Input.text
-                    [ Input.id "street"
-                    , isModelLoading model
-                        |> Input.disabled
-                    , Input.onInput FormStreetMsg
-                    , Input.placeholder "123 Sesame Street"
+    [ Card.config
+        cardOptions
+        |> Card.block
+            blockOptions
+            [ Block.titleH5 [] [ text "Enter your address" ]
+            , Form.form
+                []
+                [ Form.group []
+                    [ Form.label [ Attr.for "street" ] [ text "Street Address" ]
+                    , Input.text
+                        [ Input.id "street"
+                        , isModelLoading model
+                            |> Input.disabled
+                        , Input.onInput FormStreetMsg
+                        , Input.placeholder "123 Sesame Street"
+                        ]
                     ]
-                ]
-            , Form.group []
-                [ Form.label [ Attr.for "city" ] [ text "City" ]
-                , Input.text
-                    [ Input.id "city"
-                    , isModelLoading model
-                        |> Input.disabled
-                    , Input.onInput FormCityMsg
-                    , Input.placeholder "Hartford"
+                , Form.group []
+                    [ Form.label [ Attr.for "city" ] [ text "City" ]
+                    , Input.text
+                        [ Input.id "city"
+                        , isModelLoading model
+                            |> Input.disabled
+                        , Input.onInput FormCityMsg
+                        , Input.placeholder "Hartford"
+                        ]
                     ]
-                ]
-            , Form.group []
-                [ Form.label [ Attr.for "state" ] [ text "State" ]
-                , Input.text
-                    [ Input.id "state"
-                    , isModelLoading model
-                        |> Input.disabled
-                    , Input.onInput FormStateMsg
-                    , Input.placeholder "CT, MA, TX"
+                , Form.group []
+                    [ Form.label [ Attr.for "state" ] [ text "State" ]
+                    , Input.text
+                        [ Input.id "state"
+                        , isModelLoading model
+                            |> Input.disabled
+                        , Input.onInput FormStateMsg
+                        , Input.placeholder "CT, MA, TX"
+                        ]
                     ]
+                , Button.submitButton
+                    [ Button.primary
+                    , Button.onClick FormSubmitMsg
+                    , isFormIncomplete model
+                        |> andThen (not (isModelLoading model))
+                        |> Button.disabled
+                    ]
+                    [ text "Lookup" ]
                 ]
-            , Button.submitButton
+                |> Block.custom
+            ]
+        |> Card.view
+    ]
+
+
+buildFetchCard : Model -> List (Html Msg)
+buildFetchCard model =
+    [ Card.config
+        cardOptions
+        |> Card.block
+            blockOptions
+            [ Block.titleH5 [] [ text "Fetch your address" ]
+            , Block.text [] [ text "We will query the location from your browser." ]
+            , Button.button
                 [ Button.primary
-                , Button.onClick FormSubmitMsg
-                , isFormIncomplete model
-                    |> andThen (not (isModelLoading model))
+                , Button.onClick GeoFetchMsg
+                , isApiKeyUnavailable model
+                    |> andThen (isModelLoading model)
                     |> Button.disabled
                 ]
-                [ text "Lookup" ]
+                [ text "Fetch" ]
+                |> Block.custom
             ]
-            |> Block.custom
-        ]
-
-
-buildFetchCard : Model -> Card.Config Msg -> Card.Config Msg
-buildFetchCard model =
-    Card.block
-        blockOptions
-        [ Block.titleH5 [] [ text "Fetch your address" ]
-        , Block.text [] [ text "We will query the location from your browser." ]
-        , Button.button
-            [ Button.primary
-            , Button.onClick GeoFetchMsg
-            , isApiKeyUnavailable model
-                |> andThen (isModelLoading model)
-                |> Button.disabled
-            ]
-            [ text "Fetch" ]
-            |> Block.custom
-        ]
+        |> Card.view
+    ]
 
 
 buildResultsView : Model -> List (Html msg)
