@@ -17,6 +17,7 @@ import Html exposing (Html, div, h4, p, text)
 import Html.Attributes as Attr
 import Html.Attributes.Extra exposing (attributeIf)
 import Html.Events as Evt
+import Http
 import Json.Decode as Decode exposing (Decoder, Error(..), Value, decodeValue)
 
 
@@ -81,6 +82,7 @@ type Msg
     | FormCityMsg String
     | FormStateMsg String
     | FormSubmitMsg
+    | FormSubmitResult (Result Http.Error (List LatLng))
     | GeoFetchMsg
     | LocationReceived (Result Decode.Error LatLng)
     | LocationError Int
@@ -99,13 +101,34 @@ update msg model =
             ( { model | form = setState str model.form }, Cmd.none )
 
         FormSubmitMsg ->
-            ( model, Cmd.none )
+            -- send address to geocod.io
+            -- https://api.geocod.io/v1.6/geocode?q=1109+N+Highland+St%2c+Arlington+VA&api_key=YOUR_API_KEY
+            -- result is res.results[0].location.{lat,lng}
+            ( { model | latLng = Nothing, pageState = Loading }
+            , Http.get
+                { url = "https://api.geocod.io/v1.6/geocode?q=1109+N+Highland+St%2c+Arlington+VA&api_key=" ++ model.apiKey
+                , expect = Http.expectJson FormSubmitResult geocodioDecoder
+                }
+            )
+
+        FormSubmitResult result ->
+            case result of
+                Ok val ->
+                    ( { model | latLng = List.head val, pageState = Idle }, Cmd.none )
+
+                Err err ->
+                    case err of
+                        Http.BadBody decodeErr ->
+                            ( { model | latLng = Nothing, pageState = Error decodeErr }, Cmd.none )
+
+                        _ ->
+                            ( { model | latLng = Nothing, pageState = Error "Request error." }, Cmd.none )
 
         GeoFetchMsg ->
             ( { model | latLng = Nothing, pageState = Loading }, getLocation () )
 
-        LocationReceived res ->
-            case res of
+        LocationReceived result ->
+            case result of
                 Ok val ->
                     ( { model | latLng = Just val, pageState = Idle }, Cmd.none )
 
@@ -114,6 +137,23 @@ update msg model =
 
         LocationError code ->
             ( { model | latLng = Nothing, pageState = errorCodeDesc code }, Cmd.none )
+
+
+geocodioDecoder : Decoder (List LatLng)
+geocodioDecoder =
+    Decode.field "results" (Decode.list resultDecoder)
+
+
+resultDecoder : Decoder LatLng
+resultDecoder =
+    Decode.field "location" geoResultLocationDecoder
+
+
+geoResultLocationDecoder : Decoder LatLng
+geoResultLocationDecoder =
+    Decode.map2 LatLng
+        (Decode.field "lat" Decode.float)
+        (Decode.field "lng" Decode.float)
 
 
 errorCodeDesc : Int -> PageState
