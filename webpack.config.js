@@ -20,10 +20,7 @@ var config = {
             {
                 test: /\.html$/,
                 exclude: /node_modules/,
-                loader: 'file-loader',
-                options: {
-                    name: '[name].[ext]'
-                }
+                loader: 'html-loader',
             },
             {
                 test: /\.elm$/,
@@ -54,12 +51,12 @@ var config = {
 
     devServer: {
         port: process.env.PORT,
-        contentBase: path.join(__dirname, 'dist'),
-        inline: false,
+        contentBase: path.join(__dirname, 'src/assets'),
+        inline: true,
     },
 
     resolve: {
-        modules: [ "src", "src/assets", "node_modules" ]
+        modules: [ path.join(__dirname, "src"), "node_modules" ]
     }
 };
 

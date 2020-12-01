@@ -1,7 +1,6 @@
 port module Main exposing (main)
 
 import Bootstrap.Button as Button
-import Bootstrap.CDN as CDN
 import Bootstrap.Card as Card
 import Bootstrap.Card.Block as Block
 import Bootstrap.Form as Form
@@ -113,10 +112,6 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         FormStreetMsg str ->
-            -- { model | field = "newvalue"}
-            -- newmodel = copyoldmodel
-            -- newmodel.field = newvalue
-            -- new.f.f2 = ""
             ( { model | form = updateNestedField model.form (\f -> { f | street = str }) }, Cmd.none )
 
         FormCityMsg str ->
@@ -219,8 +214,7 @@ view model =
     { title = "Location example"
     , body =
         [ div []
-            [ CDN.stylesheet
-            , pageContent model
+            [ pageContent model
             ]
         ]
     }
@@ -317,7 +311,7 @@ buildFormCard model =
                     [ Button.primary
                     , Button.onClick FormSubmitMsg
                     , isFormIncomplete model
-                        |> orThen (isModelLoading model)
+                        || isModelLoading model
                         |> Button.disabled
                     ]
                     [ text "Lookup" ]
@@ -340,7 +334,7 @@ buildFetchCard model =
                 [ Button.primary
                 , Button.onClick GeoFetchMsg
                 , isApiKeyUnavailable model
-                    |> orThen (isModelLoading model)
+                    || isModelLoading model
                     |> Button.disabled
                 ]
                 [ text "Fetch" ]
@@ -431,11 +425,6 @@ isModelLoading m =
 isApiKeyUnavailable : Model -> Bool
 isApiKeyUnavailable model =
     model.apiKeys.geocodioApiKey == ""
-
-
-orThen : Bool -> Bool -> Bool
-orThen a b =
-    a || b
 
 
 toText : LatLng -> String
