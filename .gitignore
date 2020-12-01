@@ -1,6 +1,6 @@
 .DS_Store
 elm-stuff/
 node_modules/
+dist/
+.env
 *~
-
-main.js

@@ -1,5 +1,7 @@
 const path = require("path");
+const HTMLWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const Dotenv = require('dotenv-webpack');
 
 var config = {
     entry: {
@@ -39,9 +41,19 @@ var config = {
 
     plugins: [
         new CleanWebpackPlugin(),
+        new HTMLWebpackPlugin({
+            // Use this template to get basic responsive meta tags
+            template: "src/index.html",
+            // inject details of output file at end of body
+            inject: "body"
+        }),
+        new Dotenv({
+            path: path.resolve(__dirname, './.env')
+        })
     ],
 
     devServer: {
+        port: process.env.PORT,
         contentBase: path.join(__dirname, 'dist'),
         inline: false,
     },

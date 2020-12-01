@@ -6,8 +6,13 @@ import * as map from '../assets/@em-polymer/google-map/google-map';
 
 const { Elm } = require('./Main.elm');
 
+const flags = {
+    geocodioApiKey: process.env.GEOCODIO_API_KEY,
+    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+}
+
 var app = Elm.Main.init({
-    flags: 'c5c6fb3e05f36063fce0100303ecf0fa0f35101' // SECURITY!! DO NOT UPLOAD
+    flags: flags
 });
 
 app.ports.getLocation.subscribe(() => {

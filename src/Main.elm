@@ -1,7 +1,5 @@
 port module Main exposing (main)
 
---import Html.Attributes.Extra exposing (attributeIf)
-
 import Bootstrap.Button as Button
 import Bootstrap.CDN as CDN
 import Bootstrap.Card as Card
@@ -12,8 +10,7 @@ import Bootstrap.Grid as Grid
 import Bootstrap.Grid.Col as Col
 import Bootstrap.Grid.Row as Row
 import Bootstrap.Text as Text
-import Bootstrap.Utilities.Flex as Flex
-import Bootstrap.Utilities.Spacing as Spacing exposing (m0)
+import Bootstrap.Utilities.Spacing as Spacing
 import Browser
 import Html exposing (Html, div, h4, p, text)
 import Html.Attributes as Attr
@@ -38,6 +35,12 @@ type alias Form =
     }
 
 
+type alias ApiKeys =
+    { googleApiKey : String
+    , geocodioApiKey : String
+    }
+
+
 type LatLng
     = LatLng Float Float
 
@@ -50,7 +53,7 @@ type PageState
 
 type alias Model =
     { form : Form
-    , apiKey : String
+    , apiKeys : ApiKeys
     , latLng : Maybe LatLng
     , pageState : PageState
     }
@@ -70,12 +73,29 @@ port onError : (Int -> msg) -> Sub msg
 
 
 empty =
-    { form = Form "" "" "", latLng = Nothing, pageState = Idle, apiKey = "" }
+    { form = Form "" "" "", latLng = Nothing, pageState = Idle, apiKeys = ApiKeys "" "" }
 
 
-init : String -> ( Model, Cmd Msg )
-init geocodioApiKey =
-    ( { empty | apiKey = geocodioApiKey }, Cmd.none )
+init : Value -> ( Model, Cmd Msg )
+init value =
+    case decodeFlags value of
+        Ok flags ->
+            ( { empty | apiKeys = flags }, Cmd.none )
+
+        Err err ->
+            ( { empty | pageState = Error ("Bad configuration. Missing API keys." ++ Decode.errorToString err) }, Cmd.none )
+
+
+decodeFlags : Value -> Result Error ApiKeys
+decodeFlags value =
+    Decode.decodeValue flagsDecoder value
+
+
+flagsDecoder : Decoder ApiKeys
+flagsDecoder =
+    Decode.map2 ApiKeys
+        (Decode.field "googleMapsApiKey" Decode.string)
+        (Decode.field "geocodioApiKey" Decode.string)
 
 
 type Msg
@@ -93,13 +113,17 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         FormStreetMsg str ->
-            ( { model | form = formUpdate model.form (\f -> { f | street = str }) }, Cmd.none )
+            -- { model | field = "newvalue"}
+            -- newmodel = copyoldmodel
+            -- newmodel.field = newvalue
+            -- new.f.f2 = ""
+            ( { model | form = updateNestedField model.form (\f -> { f | street = str }) }, Cmd.none )
 
         FormCityMsg str ->
-            ( { model | form = formUpdate model.form (\f -> { f | city = str }) }, Cmd.none )
+            ( { model | form = updateNestedField model.form (\f -> { f | city = str }) }, Cmd.none )
 
         FormStateMsg str ->
-            ( { model | form = formUpdate model.form (\f -> { f | state = str }) }, Cmd.none )
+            ( { model | form = updateNestedField model.form (\f -> { f | state = str }) }, Cmd.none )
 
         FormSubmitMsg ->
             -- send address to geocod.io
@@ -111,7 +135,7 @@ update msg model =
                         "https://api.geocod.io"
                         [ "v1.6", "geocode" ]
                         [ string "q" (String.join " " [ model.form.street, model.form.city, model.form.state ])
-                        , string "api_key" model.apiKey
+                        , string "api_key" model.apiKeys.geocodioApiKey
                         ]
             in
             ( { model | latLng = Nothing, pageState = Loading }
@@ -152,8 +176,8 @@ update msg model =
             ( { model | latLng = Nothing, pageState = errorCodeDesc code }, Cmd.none )
 
 
-formUpdate : Form -> (Form -> Form) -> Form
-formUpdate form fn =
+updateNestedField : form -> (form -> form) -> form
+updateNestedField form fn =
     fn form
 
 
@@ -342,22 +366,22 @@ buildResultsView model =
                     p [] [ text "No results." ]
 
                 Just latLng ->
-                    loadMap latLng
+                    loadMap latLng model.apiKeys.googleApiKey
     ]
 
 
-loadMap : LatLng -> Html Msg
-loadMap latLng =
+loadMap : LatLng -> String -> Html Msg
+loadMap latLng apiKey =
     div []
         [ p [] [ latLng |> toText |> text ]
-        , googleMap latLng
+        , googleMap latLng apiKey
         ]
 
 
-googleMap : LatLng -> Html Msg
-googleMap latLng =
+googleMap : LatLng -> String -> Html Msg
+googleMap latLng apiKey =
     Html.node "google-map"
-        [ Attr.attribute "api-key" "AIzaSyCNArtmybelM_OqNmncJd82TBAf0xoBH9g"
+        [ Attr.attribute "api-key" apiKey
         , Attr.attribute "latitude" <| String.fromFloat <| toLatitude latLng
         , Attr.attribute "longitude" <| String.fromFloat <| toLongitude latLng
         , Attr.style "height" "500px"
@@ -406,7 +430,7 @@ isModelLoading m =
 
 isApiKeyUnavailable : Model -> Bool
 isApiKeyUnavailable model =
-    model.apiKey == ""
+    model.apiKeys.geocodioApiKey == ""
 
 
 orThen : Bool -> Bool -> Bool
