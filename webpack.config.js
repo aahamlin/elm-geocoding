@@ -53,6 +53,7 @@ var config = {
         port: process.env.PORT,
         contentBase: path.join(__dirname, 'src/assets'),
         inline: true,
+        hot: true,
     },
 
     resolve: {

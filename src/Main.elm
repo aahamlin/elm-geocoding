@@ -15,11 +15,12 @@ import Html exposing (Html, div, h4, p, text)
 import Html.Attributes as Attr
 import Http
 import Json.Decode as Decode exposing (Decoder, Error(..), Value, decodeValue)
+import Json.Encode as Encode
 import Url.Builder exposing (crossOrigin, string)
 
 
 main =
-    Browser.document
+    Browser.element
         { init = init
         , update = update
         , view = view
@@ -69,6 +70,9 @@ port setLocation : (Value -> msg) -> Sub msg
 
 
 port onError : (Int -> msg) -> Sub msg
+
+
+port addMarker : Value -> Cmd msg
 
 
 empty =
@@ -143,7 +147,16 @@ update msg model =
         FormSubmitResult result ->
             case result of
                 Ok val ->
-                    ( { model | latLng = List.head val, pageState = Idle }, Cmd.none )
+                    let
+                        maybeLatLng =
+                            List.head val
+                    in
+                    case maybeLatLng of
+                        Nothing ->
+                            ( { model | latLng = Nothing, pageState = Idle }, Cmd.none )
+
+                        Just latLng ->
+                            ( { model | latLng = Just latLng, pageState = Idle }, encodeLocation latLng |> addMarker )
 
                 Err err ->
                     case err of
@@ -162,7 +175,11 @@ update msg model =
         LocationReceived result ->
             case result of
                 Ok val ->
-                    ( { model | latLng = Just val, pageState = Idle }, Cmd.none )
+                    let
+                        latLng =
+                            Just val
+                    in
+                    ( { model | latLng = latLng, pageState = Idle }, encodeLocation val |> addMarker )
 
                 Err err ->
                     ( { model | latLng = Nothing, pageState = Error (Decode.errorToString err) }, Cmd.none )
@@ -174,6 +191,14 @@ update msg model =
 updateNestedField : form -> (form -> form) -> form
 updateNestedField form fn =
     fn form
+
+
+encodeLocation : LatLng -> Encode.Value
+encodeLocation (LatLng lat lng) =
+    Encode.object
+        [ ( "latitude", Encode.float lat )
+        , ( "longitude", Encode.float lng )
+        ]
 
 
 geocodioDecoder : Decoder (List LatLng)
@@ -209,15 +234,11 @@ errorCodeDesc e =
             Error "UNKNOWN"
 
 
-view : Model -> Browser.Document Msg
+view : Model -> Html Msg
 view model =
-    { title = "Location example"
-    , body =
-        [ div []
-            [ pageContent model
-            ]
+    div []
+        [ pageContent model
         ]
-    }
 
 
 pageContent : Model -> Html Msg
@@ -347,7 +368,14 @@ buildFetchCard model =
 buildResultsView : Model -> List (Html Msg)
 buildResultsView model =
     [ h4 [] [ text "Your location info" ]
-    , case model.pageState of
+    , viewText model
+    , googleMap model.apiKeys.googleApiKey
+    ]
+
+
+viewText : Model -> Html Msg
+viewText model =
+    case model.pageState of
         Loading ->
             p [] [ text "Retrieving results..." ]
 
@@ -360,35 +388,36 @@ buildResultsView model =
                     p [] [ text "No results." ]
 
                 Just latLng ->
-                    loadMap latLng model.apiKeys.googleApiKey
-    ]
+                    p [] [ latLng |> toText |> text ]
 
 
-loadMap : LatLng -> String -> Html Msg
-loadMap latLng apiKey =
-    div []
-        [ p [] [ latLng |> toText |> text ]
-        , googleMap latLng apiKey
-        ]
-
-
-googleMap : LatLng -> String -> Html Msg
-googleMap latLng apiKey =
+googleMap : String -> Html Msg
+googleMap apiKey =
+    let
+        -- default geographic center of USA 37.0902° N, 95.7129 W
+        latLng =
+            LatLng 37.0902 -95.7129
+    in
     Html.node "google-map"
-        [ Attr.attribute "api-key" apiKey
+        [ Attr.id "my-map-id"
+        , Attr.attribute "api-key" apiKey
         , Attr.attribute "latitude" <| String.fromFloat <| toLatitude latLng
         , Attr.attribute "longitude" <| String.fromFloat <| toLongitude latLng
+        , Attr.attribute "zoom" "5"
         , Attr.style "height" "500px"
         ]
-        [ googleMapMarker latLng
+        [ googleMapMarker
         ]
 
 
-googleMapMarker : LatLng -> Html Msg
-googleMapMarker latLng =
+googleMapMarker : Html Msg
+googleMapMarker =
     Html.node "google-map-marker"
-        [ Attr.attribute "latitude" <| String.fromFloat <| toLatitude latLng
-        , Attr.attribute "longitude" <| String.fromFloat <| toLongitude latLng
+        [ Attr.id "my-map-marker-id"
+
+        -- , Attr.attribute "latitude" <| String.fromFloat <| toLatitude latLng
+        -- , Attr.attribute "longitude" <| String.fromFloat <| toLongitude latLng
+        -- , Attr.attribute "label" "[Your address here]"
         ]
         []
 
