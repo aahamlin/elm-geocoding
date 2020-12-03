@@ -236,7 +236,7 @@ errorCodeDesc e =
 
 view : Model -> Html Msg
 view model =
-    div []
+    div [ Attr.class "bg-light" ]
         [ pageContent model
         ]
 
@@ -244,7 +244,7 @@ view model =
 pageContent : Model -> Html Msg
 pageContent model =
     div []
-        [ Grid.container [ Spacing.mt5 ]
+        [ Grid.container [ Spacing.mt0 ]
             [ Grid.row
                 gridRowOptions
                 [ Grid.col
